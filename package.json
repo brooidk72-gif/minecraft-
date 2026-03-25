@@ -1,0 +1,13 @@
+{
+  "name": "bedrock-bot",
+  "version": "1.0.0",
+  "description": "Minecraft Bedrock Bot for Railway",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "bedrock-protocol": "^3.30.0",
+    "dotenv": "^16.0.0"
+  }
+}
