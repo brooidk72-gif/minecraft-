@@ -1,9 +1,14 @@
-require('dotenv').config();
 const { createClient } = require('bedrock-protocol');
 
+// Read secrets directly from environment variables (Railway)
 const host = process.env.SERVER_HOST;
 const port = parseInt(process.env.SERVER_PORT);
 const username = process.env.MICROSOFT_EMAIL;
+
+if (!host || !port || !username) {
+  console.error("❌ Missing SERVER_HOST, SERVER_PORT, or MICROSOFT_EMAIL environment variable!");
+  process.exit(1);
+}
 
 console.log("Starting bot...");
 
@@ -43,7 +48,7 @@ setInterval(() => {
   }
 }, 5000);
 
-// Microsoft login first-time
+// First-time Microsoft login
 client.on('xboxauth', (authUrl) => {
   console.log(`📌 Open this URL in your browser to login: ${authUrl}`);
   console.log('After logging in, the bot will continue automatically.');
