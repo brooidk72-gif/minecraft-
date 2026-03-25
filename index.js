@@ -1,72 +1,44 @@
-const { createClient } = require('bedrock-protocol');
-const readline = require('readline');
+const bedrock = require('bedrock-protocol');
 
-const host = process.env.SERVER_HOST;
-const port = parseInt(process.env.SERVER_PORT);
-const username = process.env.MICROSOFT_EMAIL;
+// Read server info from environment variables
+const HOST = process.env.SERVER_HOST;
+const PORT = parseInt(process.env.SERVER_PORT) || 19132;
 
-if (!host || !port || !username) {
-  console.error("❌ Missing SERVER_HOST, SERVER_PORT, or MICROSOFT_EMAIL environment variable!");
-  process.exit(1);
+// Generate a random bot username
+function generateUsername() {
+    return 'Bot_' + Math.floor(Math.random() * 10000);
 }
 
-// Step 1: Create client in offline mode to generate login URL
-const client = createClient({
-  host,
-  port,
-  username,
-  offline: true  // ❌ prevents auto connection to server
-});
+// Main function to connect the bot
+function connectBot() {
+    console.log(`🔄 Attempting to connect to ${HOST}:${PORT} ...`);
 
-// Step 2: Wait for Microsoft authentication
-client.on('xboxauth', (authUrl) => {
-  console.log("\n📌 Microsoft Login URL:");
-  console.log(authUrl);
-  console.log("⏸ Bot paused. Open the link in a browser and log in.");
-  console.log("Once logged in, press ENTER to continue connecting...\n");
+    const client = bedrock.createClient({
+        host: HOST,
+        port: PORT,
+        username: generateUsername(),
+        offline: true, // Works without Xbox auth
+    });
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+    client.on('connect', () => {
+        console.log('✅ Connected to server!');
+    });
 
-  rl.question("", () => {
-    rl.close();
-    console.log("✅ Resuming bot connection...");
+    client.on('spawn', () => {
+        console.log('🌍 Bot spawned in the world!');
+    });
 
-    // Step 3: Switch to real mode and connect
-    client.offline = false;
-    client.connect();
-  });
-});
+    client.on('error', (err) => {
+        console.log('❌ Bot error:', err.message);
+        console.log('⏳ Retrying in 5 seconds...');
+        setTimeout(connectBot, 5000);
+    });
 
-// Step 4: Crash-safe packet handling
-client.on('spawn', () => {
-  console.log("🚀 Bot spawned!");
-  setInterval(() => {
-    try {
-      if (client?.queue) {
-        client.queue('player_auth_input', {
-          pitch: 0,
-          yaw: 0,
-          position: { x: 0, y: 0, z: 0 },
-          moveVector: { x: 0, z: 0 },
-          headYaw: 0,
-          inputData: 0
-        });
-      }
-    } catch (err) {
-      console.warn("⚠️ Ignored packet error:", err.message);
-    }
-  }, 5000); // keeps bot alive
-});
+    client.on('close', () => {
+        console.log('❌ Connection closed, retrying in 5 seconds...');
+        setTimeout(connectBot, 5000);
+    });
+}
 
-// Step 5: Safe chat logging
-client.on('text', (packet) => {
-  console.log("💬 Chat:", packet.message);
-});
-
-// Step 6: General error handling
-client.on('error', (err) => {
-  console.error("❌ Bot error:", err.message);
-});
+// Start the bot
+connectBot();
