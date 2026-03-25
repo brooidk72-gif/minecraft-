@@ -1,38 +1,32 @@
-// index.js
 const mc = require('bedrock-protocol');
-const { MicrosoftAuthFlow } = require('prismarine-auth');
+const { authenticate } = require('prismarine-auth');
 
-// --- CONFIG ---
-const SERVER_HOST = process.env.SERVER_HOST || '127.0.0.1';
-const SERVER_PORT = parseInt(process.env.SERVER_PORT) || 19132;
-const USERNAME = process.env.MC_USERNAME || 'Bot'; // Used in Offline/Basic
-const RETRY_DELAY = 15000; // Retry all methods delay (15s)
-const POST_MSA_DELAY = 20000; // Wait after Microsoft login (20s)
+const SERVER_HOST = process.env.SERVER_HOST || 'imcooldude423.aternos.me';
+const SERVER_PORT = parseInt(process.env.SERVER_PORT) || 59233;
+const USERNAME = process.env.MC_USERNAME || 'Bot';
+const RETRY_DELAY = 15000; // 15s retry
+const POST_MSA_DELAY = 20000; // 20s after login
 
 let paused = false;
 
-// --- MICROSOFT AUTH ---
 async function loginMicrosoft() {
     console.log('[msa] Starting Microsoft login...');
-    const auth = new MicrosoftAuthFlow();
-    const code = await auth.getAuthCode();
-    console.log(`[msa] Use this code in your browser: ${code}`);
-    
-    // Pause automatically while user logs in
     paused = true;
-    console.log(`⏸ Paused for Microsoft login. Waiting ${POST_MSA_DELAY/1000} seconds before reconnect...`);
 
-    // Wait 20 seconds for login to complete
-    await new Promise(resolve => setTimeout(resolve, POST_MSA_DELAY));
-    
-    const token = await auth.getAuthToken();
-    console.log('[msa] Signed in with Microsoft!');
-    
-    paused = false; // unpause for reconnect
+    const token = await authenticate({
+        clientId: '00000000402b5328', // Microsoft default client ID
+        scopes: ['XboxLive.signin', 'offline_access'],
+        redirectUri: 'https://login.live.com/oauth20_desktop.srf',
+    });
+
+    console.log('[msa] Microsoft signed in!');
+    console.log(`⏸ Waiting ${POST_MSA_DELAY / 1000}s before connecting...`);
+    await new Promise(res => setTimeout(res, POST_MSA_DELAY));
+    paused = false;
+
     return token;
 }
 
-// --- CONNECT METHODS ---
 async function connectBot() {
     if (paused) return;
 
@@ -79,12 +73,11 @@ async function connectBot() {
     }
 
     if (!paused) {
-        console.log(`⏳ Retrying ALL methods in ${RETRY_DELAY / 1000} seconds...`);
+        console.log(`⏳ Retrying ALL methods in ${RETRY_DELAY / 1000}s...`);
         setTimeout(connectBot, RETRY_DELAY);
     }
 }
 
-// --- CLIENT EVENTS ---
 function setupClientEvents(client) {
     client.on('connect', () => console.log('✅ Connected!'));
     client.on('disconnect', (packet) => {
@@ -94,5 +87,5 @@ function setupClientEvents(client) {
     client.on('error', (err) => console.error('⚠️ Bot error:', err.message || err));
 }
 
-// --- START BOT ---
+// --- START ---
 connectBot();
