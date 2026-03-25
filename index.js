@@ -10,36 +10,37 @@ if (!host || !port || !username) {
   process.exit(1);
 }
 
-// Step 1: Create client in offline mode for safe login
+// Step 1: Create client in offline mode to generate login URL
 const client = createClient({
   host,
   port,
   username,
-  offline: true // prevents sending any packets yet
+  offline: true  // ❌ prevents auto connection to server
 });
 
-// Step 2: Pause before login
+// Step 2: Wait for Microsoft authentication
 client.on('xboxauth', (authUrl) => {
-  console.log("📌 Microsoft Login URL:");
+  console.log("\n📌 Microsoft Login URL:");
   console.log(authUrl);
-  console.log("⏸ Bot paused. Copy the code and press ENTER to continue.");
+  console.log("⏸ Bot paused. Open the link in a browser and log in.");
+  console.log("Once logged in, press ENTER to continue connecting...\n");
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  rl.question("Press ENTER to continue connecting...", () => {
+  rl.question("", () => {
     rl.close();
     console.log("✅ Resuming bot connection...");
 
-    // Step 3: Reconnect in real mode
+    // Step 3: Switch to real mode and connect
     client.offline = false;
     client.connect();
   });
 });
 
-// Step 4: Wrap packet sending to avoid crashes on Geyser
+// Step 4: Crash-safe packet handling
 client.on('spawn', () => {
   console.log("🚀 Bot spawned!");
   setInterval(() => {
@@ -55,7 +56,7 @@ client.on('spawn', () => {
         });
       }
     } catch (err) {
-      console.warn("⚠️ Ignored packet error (server may be Geyser):", err.message);
+      console.warn("⚠️ Ignored packet error:", err.message);
     }
   }, 5000); // keeps bot alive
 });
@@ -65,7 +66,7 @@ client.on('text', (packet) => {
   console.log("💬 Chat:", packet.message);
 });
 
-// Step 6: Error handling
+// Step 6: General error handling
 client.on('error', (err) => {
   console.error("❌ Bot error:", err.message);
 });
